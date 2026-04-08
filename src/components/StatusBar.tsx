@@ -1,4 +1,5 @@
 import { memo, useState, useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { apiUrl, isRemote } from "../lib/api";
 import { SOUND_PROFILES, getSoundProfile, setSoundProfile, previewSound, type SoundProfile } from "../lib/sounds";
 
@@ -118,7 +119,8 @@ export const StatusBar = memo(function StatusBar({ connected, agentCount, sessio
   const activeLabel = NAV_ITEMS.find(i => i.id === activeView)?.label || "Menu";
 
   return (
-    <header className="hud-frame cyber-panel sticky top-0 z-20 flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-2 mx-2 sm:mx-6 mt-2 sm:mt-3 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl">
+    <>
+    <header className="hud-frame cyber-panel sticky top-0 z-20 flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-2 mx-2 sm:mx-6 mt-2 sm:mt-3 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl pr-16 md:pr-6">
       <a href="#office" className="cyber-glow text-sm sm:text-lg font-bold tracking-[3px] sm:tracking-[6px] text-cyan-300 uppercase whitespace-nowrap hover:text-cyan-200 transition-colors flex items-center gap-1.5 sm:gap-2">
         <span className="text-cyan-400/60">[</span>
         <span className="hidden xs:inline sm:inline">HAOCOMM Office</span>
@@ -202,31 +204,48 @@ export const StatusBar = memo(function StatusBar({ connected, agentCount, sessio
         ))}
       </nav>
 
-      {/* Mobile hamburger */}
-      <div ref={menuRef} className="md:hidden ml-auto relative">
-        <button
-          onClick={() => setMenuOpen(v => !v)}
-          className="relative px-3 py-1.5 rounded-lg text-xs font-mono font-bold active:scale-95 transition-all whitespace-nowrap flex items-center gap-1.5"
-          style={{ background: "rgba(0,240,255,0.12)", color: "#00f0ff", border: "1px solid rgba(0,240,255,0.3)" }}
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-        >
-          <span>{menuOpen ? "✕" : "☰"}</span>
-          <span className="uppercase tracking-wider">{activeLabel}</span>
-          {askCount > 0 && !menuOpen && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[9px] font-bold text-white bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]">
-              {askCount}
-            </span>
-          )}
-        </button>
-        {menuOpen && (
+    </header>
+
+    {/* Mobile hamburger — portal to document.body to escape sticky header stacking context */}
+    {createPortal(
+    <div ref={menuRef} className="md:hidden">
+      <button
+        onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}
+        className="fixed top-4 right-4 z-[200] px-3 py-2 rounded-lg text-xs font-mono font-bold active:scale-95 transition-all whitespace-nowrap flex items-center gap-1.5"
+        style={{
+          background: "rgba(0,240,255,0.18)",
+          color: "#00f0ff",
+          border: "1px solid rgba(0,240,255,0.4)",
+          backdropFilter: "blur(12px)",
+          boxShadow: "0 0 16px rgba(0,240,255,0.25)",
+          touchAction: "manipulation",
+        }}
+        aria-label="Open menu"
+        aria-expanded={menuOpen}
+      >
+        <span>{menuOpen ? "✕" : "☰"}</span>
+        <span className="uppercase tracking-wider">{activeLabel}</span>
+        {askCount > 0 && !menuOpen && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[9px] font-bold text-white bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]">
+            {askCount}
+          </span>
+        )}
+      </button>
+      {menuOpen && (
+        <>
           <div
-            className="cyber-panel absolute top-full right-0 mt-2 rounded-xl overflow-hidden min-w-[180px] z-50"
-            style={{ animation: "fadeSlideIn 0.15s ease-out" }}
+            className="fixed inset-0 z-[150]"
+            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)", touchAction: "none" }}
+            onClick={() => setMenuOpen(false)}
+          />
+          <div
+            className="cyber-panel fixed top-16 right-4 rounded-xl overflow-hidden min-w-[200px] max-w-[calc(100vw-32px)] z-[201]"
+            style={{ animation: "fadeSlideIn 0.15s ease-out", touchAction: "manipulation" }}
           >
             {onInbox && (
               <button
-                onClick={() => { setMenuOpen(false); onInbox(); }}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onInbox(); }}
                 className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-cyan-500/10 border-b border-cyan-400/10"
               >
                 <span className="text-xs font-mono uppercase tracking-wider text-white/70">Inbox</span>
@@ -238,22 +257,29 @@ export const StatusBar = memo(function StatusBar({ connected, agentCount, sessio
               </button>
             )}
             {NAV_ITEMS.map((item) => (
-              <a
+              <button
                 key={item.id}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                className={`block px-4 py-2.5 text-xs font-mono uppercase tracking-wider transition-colors border-b border-cyan-400/5 last:border-0 ${
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  window.location.hash = item.id;
+                }}
+                className={`w-full block text-left px-4 py-3 text-xs font-mono uppercase tracking-wider transition-colors border-b border-cyan-400/5 last:border-0 ${
                   activeView === item.id
                     ? "text-cyan-300 bg-cyan-500/10 cyber-glow"
-                    : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+                    : "text-white/60 hover:text-white hover:bg-white/[0.04] active:bg-cyan-500/5"
                 }`}
               >
                 {activeView === item.id ? "▸ " : "  "}{item.label}
-              </a>
+              </button>
             ))}
           </div>
-        )}
-      </div>
-    </header>
+        </>
+      )}
+    </div>,
+    document.body
+    )}
+    </>
   );
 });

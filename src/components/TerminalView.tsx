@@ -11,15 +11,79 @@ interface TerminalViewProps {
   onSelectAgent: (agent: AgentState) => void;
 }
 
+const SIDEBAR_MIN = 160;
+const SIDEBAR_MAX = 480;
+const SIDEBAR_DEFAULT = 220;
+
 export const TerminalView = memo(function TerminalView({ sessions, agents, connected, onSelectAgent }: TerminalViewProps) {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [captureHtml, setCaptureHtml] = useState("");
   const [inputBuf, setInputBuf] = useState("");
   const [sendQueue, setSendQueue] = useState<string[]>([]);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    const saved = parseInt(localStorage.getItem("terminal-sidebar-width") || "", 10);
+    return Number.isFinite(saved) && saved >= SIDEBAR_MIN && saved <= SIDEBAR_MAX ? saved : SIDEBAR_DEFAULT;
+  });
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    // Default: open on desktop, closed on mobile
+    if (typeof window === "undefined") return true;
+    return window.innerWidth >= 768 && localStorage.getItem("terminal-sidebar-open") !== "0";
+  });
   const wsRef = useRef<WebSocket | null>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<HTMLDivElement>(null);
+  const hiddenInputRef = useRef<HTMLTextAreaElement>(null);
   const sendingRef = useRef(false);
+  const draggingRef = useRef(false);
+
+  const focusTerminal = useCallback(() => {
+    // Mobile requires focusing a real input/textarea to summon keyboard
+    hiddenInputRef.current?.focus();
+  }, []);
+
+  // Drag resize handlers
+  useEffect(() => {
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      if (!draggingRef.current) return;
+      const x = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const rect = termRef.current?.parentElement?.getBoundingClientRect();
+      const left = rect?.left ?? 0;
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, x - left));
+      setSidebarWidth(next);
+    };
+    const onUp = () => {
+      if (draggingRef.current) {
+        draggingRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        localStorage.setItem("terminal-sidebar-width", String(sidebarWidth));
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, [sidebarWidth]);
+
+  const startDrag = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen(v => {
+      localStorage.setItem("terminal-sidebar-open", v ? "0" : "1");
+      return !v;
+    });
+  }, []);
 
   // Own WebSocket for capture stream (separate from main fleet WS)
   useEffect(() => {
@@ -69,7 +133,7 @@ export const TerminalView = memo(function TerminalView({ sessions, agents, conne
     setCaptureHtml("");
     setInputBuf("");
     setSendQueue([]);
-    termRef.current?.focus();
+    focusTerminal();
   }, []);
 
   // Flush send queue
@@ -157,9 +221,12 @@ export const TerminalView = memo(function TerminalView({ sessions, agents, conne
     : "";
 
   return (
-    <div className="flex mx-4 sm:mx-6 mb-3 rounded-2xl overflow-hidden border border-white/[0.06]" style={{ height: "calc(100vh - 72px)" }}>
+    <div className="relative flex mx-2 sm:mx-6 mb-3 rounded-2xl overflow-hidden border border-white/[0.06]" style={{ height: "calc(100vh - 72px)" }}>
       {/* Sidebar */}
-      <div className="w-[220px] flex-shrink-0 flex flex-col border-r border-white/[0.06] overflow-y-auto" style={{ background: "#08080e" }}>
+      <div
+        className={`flex-shrink-0 flex flex-col border-r border-white/[0.06] overflow-y-auto transition-[width] ${sidebarOpen ? "" : "w-0 border-r-0"}`}
+        style={{ background: "#08080e", width: sidebarOpen ? sidebarWidth : 0 }}
+      >
         {sessions.map(session => {
           const style = roomStyle(session.name);
           return (
@@ -199,17 +266,59 @@ export const TerminalView = memo(function TerminalView({ sessions, agents, conne
         })}
       </div>
 
+      {/* Drag handle — only when sidebar is open */}
+      {sidebarOpen && (
+        <div
+          onMouseDown={startDrag}
+          onTouchStart={startDrag}
+          className="flex-shrink-0 relative group hidden sm:block"
+          style={{ width: 6, cursor: "col-resize", background: "transparent", touchAction: "none" }}
+          title="Drag to resize · double-click to reset"
+          onDoubleClick={() => { setSidebarWidth(SIDEBAR_DEFAULT); localStorage.setItem("terminal-sidebar-width", String(SIDEBAR_DEFAULT)); }}
+        >
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-cyan-400/20 group-hover:bg-cyan-400/60 group-active:bg-cyan-400 transition-colors" />
+        </div>
+      )}
+
       {/* Terminal pane */}
       <div
         ref={termRef}
-        className="flex-1 flex flex-col min-w-0 outline-none"
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        onClick={() => termRef.current?.focus()}
+        className="relative flex-1 flex flex-col min-w-0 outline-none"
+        onClick={focusTerminal}
       >
+        {/* Hidden textarea — captures keyboard (mobile summons soft keyboard) */}
+        <textarea
+          ref={hiddenInputRef}
+          value=""
+          onChange={() => {}}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onInput={(e) => {
+            // Mobile: onKeyDown doesn't fire for character keys. Grab inserted text here.
+            const data = (e.nativeEvent as InputEvent).data;
+            if (data) setInputBuf(b => b + data);
+            // Keep textarea empty so next input event still fires
+            (e.target as HTMLTextAreaElement).value = "";
+          }}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          spellCheck={false}
+          inputMode="text"
+          aria-label="Terminal input"
+          className="absolute opacity-0 pointer-events-none"
+          style={{ left: 0, bottom: 0, width: 1, height: 1, caretColor: "transparent", resize: "none" }}
+        />
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-2 border-b border-white/[0.06] flex-shrink-0" style={{ background: "#0a0a12" }}>
+          <button
+            onClick={toggleSidebar}
+            className="flex-shrink-0 px-2 py-0.5 rounded text-[11px] font-mono active:scale-95 transition-all"
+            style={{ background: "rgba(0,240,255,0.1)", color: "#00f0ff", border: "1px solid rgba(0,240,255,0.25)" }}
+            title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+          >
+            {sidebarOpen ? "◀" : "▶"}
+          </button>
           <span className="text-xs font-mono text-white/40">{selectedName || "select a window"}</span>
           {selectedTarget && <span className="text-[10px] font-mono text-white/20">{selectedTarget}</span>}
           <span className="ml-auto text-[10px] font-mono" style={{ color: connected ? "#4caf50" : "#ef5350" }}>

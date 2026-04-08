@@ -26,24 +26,23 @@ body {
   overflow-x: hidden;
 }
 
-/* CRT scanline overlay (very subtle, fixed) */
+/* CRT scanline overlay (very subtle) — low z, no blend mode (mobile Safari safe) */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 1;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(0, 240, 255, 0.025) 0px,
-    rgba(0, 240, 255, 0.025) 1px,
+    rgba(0, 240, 255, 0.03) 0px,
+    rgba(0, 240, 255, 0.03) 1px,
     transparent 1px,
     transparent 3px
   );
-  mix-blend-mode: overlay;
 }
 
-/* Hex grid background (fixed, behind UniverseBg) */
+/* Ambient vignette (fixed, behind UniverseBg) */
 body::after {
   content: '';
   position: fixed;
@@ -102,7 +101,9 @@ button, [role="button"], a[href], summary { cursor: pointer; }
   width: 12px;
   height: 12px;
   border: 1.5px solid var(--cyber-cyan);
-  pointer-events: none;
+  pointer-events: none !important;
+  touch-action: none;
+  z-index: 0;
 }
 .hud-frame::before {
   top: -2px; left: -2px;
