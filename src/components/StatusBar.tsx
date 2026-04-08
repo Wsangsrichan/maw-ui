@@ -105,64 +105,78 @@ function useTokenRate() {
 
 export const StatusBar = memo(function StatusBar({ connected, agentCount, sessionCount, tabCount = 0, activeView = "office", askCount = 0, onInbox, onJump, muted, onToggleMute, children }: StatusBarProps) {
   const { lastHourRate } = useTokenRate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const h = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false); };
+    document.addEventListener("click", h);
+    return () => document.removeEventListener("click", h);
+  }, [menuOpen]);
+
+  const activeLabel = NAV_ITEMS.find(i => i.id === activeView)?.label || "Menu";
+
   return (
-    <header className="hud-frame cyber-panel sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 mx-4 sm:mx-6 mt-3 px-4 sm:px-6 py-2.5 rounded-xl">
-      <a href="#office" className="cyber-glow text-base sm:text-lg font-bold tracking-[4px] sm:tracking-[6px] text-cyan-300 uppercase whitespace-nowrap hover:text-cyan-200 transition-colors flex items-center gap-2">
+    <header className="hud-frame cyber-panel sticky top-0 z-20 flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-2 mx-2 sm:mx-6 mt-2 sm:mt-3 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl">
+      <a href="#office" className="cyber-glow text-sm sm:text-lg font-bold tracking-[3px] sm:tracking-[6px] text-cyan-300 uppercase whitespace-nowrap hover:text-cyan-200 transition-colors flex items-center gap-1.5 sm:gap-2">
         <span className="text-cyan-400/60">[</span>
-        HAOCOMM Office
+        <span className="hidden xs:inline sm:inline">HAOCOMM Office</span>
+        <span className="xs:hidden sm:hidden">HAOCOMM</span>
         <span className="text-cyan-400/60">]</span>
       </a>
 
-      <span className="flex items-center gap-1.5 text-sm text-white/70">
-        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? "bg-emerald-400 shadow-[0_0_6px_#4caf50]" : "bg-red-400 animate-pulse"}`} />
-        {connected ? "LIVE" : "..."}
+      <span className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm text-white/70">
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? "bg-emerald-400 shadow-[0_0_6px_#39ff14]" : "bg-red-400 animate-pulse"}`} />
+        <span className="hidden sm:inline">{connected ? "LIVE" : "..."}</span>
       </span>
 
       {isRemote && (
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md whitespace-nowrap" style={{ background: "rgba(251,191,36,0.12)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.2)" }}>
+        <span className="hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded-md whitespace-nowrap" style={{ background: "rgba(251,191,36,0.12)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.2)" }}>
           {new URLSearchParams(window.location.search).get("host")}
         </span>
       )}
 
-      <span className="text-sm text-white/70 whitespace-nowrap">
-        <strong className="text-cyan-400">{agentCount}</strong> agents
+      <span className="text-xs sm:text-sm text-white/70 whitespace-nowrap">
+        <strong className="text-cyan-400">{agentCount}</strong> <span className="hidden sm:inline">agents</span><span className="sm:hidden">ag</span>
       </span>
-      <span className="text-sm text-white/70 whitespace-nowrap">
+      <span className="hidden sm:inline text-sm text-white/70 whitespace-nowrap">
         <strong className="text-purple-400">{sessionCount}</strong> rooms
       </span>
       {tabCount > 0 && (
-        <span className="text-sm text-white/70 whitespace-nowrap">
+        <span className="hidden md:inline text-sm text-white/70 whitespace-nowrap">
           <strong className="text-green-400">{tabCount}</strong> tabs
         </span>
       )}
-      <span className="text-[10px] text-white/20 font-mono whitespace-nowrap">
+      <span className="hidden md:inline text-[10px] text-white/20 font-mono whitespace-nowrap">
         v{__MAW_VERSION__} · {__MAW_BUILD__}
       </span>
 
       {lastHourRate && lastHourRate.totalTokens > 0 && (
-        <span className="text-[10px] font-mono whitespace-nowrap flex items-center gap-1" title={`Last 60min — ${formatTokens(lastHourRate.inputTokens)} in · ${formatTokens(lastHourRate.outputTokens)} out · ${lastHourRate.turns} turns`}>
+        <span className="hidden lg:flex text-[10px] font-mono whitespace-nowrap items-center gap-1" title={`Last 60min — ${formatTokens(lastHourRate.inputTokens)} in · ${formatTokens(lastHourRate.outputTokens)} out · ${lastHourRate.turns} turns`}>
           <span className="text-amber-400/70">{formatTokens(lastHourRate.totalPerMin)}</span>
           <span className="text-white/15">tok/min</span>
         </span>
       )}
 
-      {/* View-specific controls injected by parent */}
-      {children}
+      {/* View-specific controls injected by parent — hidden on mobile to save space */}
+      <div className="hidden md:contents">{children}</div>
 
       {onToggleMute && <SoundButton muted={muted} onToggleMute={onToggleMute} />}
 
       {isTouch && onJump && (
         <button
           onClick={onJump}
-          className="px-3 py-1.5 rounded-lg text-xs font-mono font-bold active:scale-95 transition-all whitespace-nowrap"
-          style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.25)" }}
+          className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-mono font-bold active:scale-95 transition-all whitespace-nowrap"
+          style={{ background: "rgba(0,240,255,0.15)", color: "#00f0ff", border: "1px solid rgba(0,240,255,0.3)" }}
           title="Jump to agent (⌘J)"
         >
           ⌘J
         </button>
       )}
 
-      <nav className={`${isTouch && onJump ? "" : "ml-auto "}flex items-center gap-3 sm:gap-4 text-sm`}>
+      {/* Desktop nav */}
+      <nav className={`${isTouch && onJump ? "" : "ml-auto "}hidden md:flex items-center gap-3 lg:gap-4 text-sm`}>
         {onInbox && (
           <button onClick={onInbox} className="relative transition-colors whitespace-nowrap text-white/50 hover:text-white/80 cursor-pointer" title="Inbox (i)">
             Inbox
@@ -179,7 +193,7 @@ export const StatusBar = memo(function StatusBar({ connected, agentCount, sessio
             href={item.href}
             className={`transition-colors whitespace-nowrap ${
               activeView === item.id
-                ? "text-cyan-400 font-bold"
+                ? "text-cyan-300 font-bold cyber-glow"
                 : "text-white/50 hover:text-white/80"
             }`}
           >
@@ -187,6 +201,59 @@ export const StatusBar = memo(function StatusBar({ connected, agentCount, sessio
           </a>
         ))}
       </nav>
+
+      {/* Mobile hamburger */}
+      <div ref={menuRef} className="md:hidden ml-auto relative">
+        <button
+          onClick={() => setMenuOpen(v => !v)}
+          className="relative px-3 py-1.5 rounded-lg text-xs font-mono font-bold active:scale-95 transition-all whitespace-nowrap flex items-center gap-1.5"
+          style={{ background: "rgba(0,240,255,0.12)", color: "#00f0ff", border: "1px solid rgba(0,240,255,0.3)" }}
+          aria-label="Open menu"
+          aria-expanded={menuOpen}
+        >
+          <span>{menuOpen ? "✕" : "☰"}</span>
+          <span className="uppercase tracking-wider">{activeLabel}</span>
+          {askCount > 0 && !menuOpen && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[9px] font-bold text-white bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]">
+              {askCount}
+            </span>
+          )}
+        </button>
+        {menuOpen && (
+          <div
+            className="cyber-panel absolute top-full right-0 mt-2 rounded-xl overflow-hidden min-w-[180px] z-50"
+            style={{ animation: "fadeSlideIn 0.15s ease-out" }}
+          >
+            {onInbox && (
+              <button
+                onClick={() => { setMenuOpen(false); onInbox(); }}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-cyan-500/10 border-b border-cyan-400/10"
+              >
+                <span className="text-xs font-mono uppercase tracking-wider text-white/70">Inbox</span>
+                {askCount > 0 && (
+                  <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white bg-red-500">
+                    {askCount}
+                  </span>
+                )}
+              </button>
+            )}
+            {NAV_ITEMS.map((item) => (
+              <a
+                key={item.id}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className={`block px-4 py-2.5 text-xs font-mono uppercase tracking-wider transition-colors border-b border-cyan-400/5 last:border-0 ${
+                  activeView === item.id
+                    ? "text-cyan-300 bg-cyan-500/10 cyber-glow"
+                    : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+                }`}
+              >
+                {activeView === item.id ? "▸ " : "  "}{item.label}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
     </header>
   );
 });
