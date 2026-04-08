@@ -1,111 +1,125 @@
 import { useEffect, useRef } from "react";
-import * as THREE from "three";
 
+/**
+ * Cyber Security background:
+ * - Hex grid (canvas, animated pulse)
+ * - Matrix-style binary rain
+ * - Subtle vignette
+ * Replaces previous three.js nebula scene for a tactical HUD feel.
+ */
 export function UniverseBg() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    const w = el.clientWidth;
-    const h = el.clientHeight;
+    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    let w = window.innerWidth;
+    let h = window.innerHeight;
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x020208);
-
-    const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 500);
-    camera.position.set(0, 2, 20);
-    camera.lookAt(0, 0, 0);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
-    renderer.setSize(w, h);
-    renderer.setPixelRatio(1); // Cap at 1x for performance
-    el.appendChild(renderer.domElement);
-
-    // Stars — reduced count, bigger size to compensate no bloom
-    const starCount = 1200;
-    const starPos = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount; i++) {
-      starPos[i * 3] = (Math.random() - 0.5) * 120;
-      starPos[i * 3 + 1] = (Math.random() - 0.5) * 70;
-      starPos[i * 3 + 2] = (Math.random() - 0.5) * 120;
+    function resize() {
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas!.width = w * dpr;
+      canvas!.height = h * dpr;
+      canvas!.style.width = w + "px";
+      canvas!.style.height = h + "px";
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-    const starMat = new THREE.PointsMaterial({
-      color: 0xffffff, size: 0.08, transparent: true, opacity: 0.6,
-      sizeAttenuation: true,
-    });
-    scene.add(new THREE.Points(starGeo, starMat));
+    resize();
+    window.addEventListener("resize", resize);
 
-    // Wireframe globe
-    const globeGeo = new THREE.SphereGeometry(12, 24, 16); // Lower segments
-    const globeWire = new THREE.WireframeGeometry(globeGeo);
-    const globeMat = new THREE.LineBasicMaterial({
-      color: 0x6a5acd, opacity: 0.04, transparent: true,
-    });
-    const globe = new THREE.LineSegments(globeWire, globeMat);
-    scene.add(globe);
+    // --- Hex grid ---
+    const hexSize = 28;
+    const hexW = Math.sqrt(3) * hexSize;
+    const hexH = 2 * hexSize;
+    const vert = hexH * 0.75;
 
-    // Nebula particles (colored clusters) — fewer particles
-    const nebulaColors = [0x26c6da, 0x7e57c2, 0xffa726, 0x4caf50, 0xef5350];
-    nebulaColors.forEach((color, ci) => {
-      const count = 40;
-      const pos = new Float32Array(count * 3);
-      const angle = (ci / nebulaColors.length) * Math.PI * 2;
-      const cx = Math.cos(angle) * 8;
-      const cz = Math.sin(angle) * 8;
-      for (let i = 0; i < count; i++) {
-        pos[i * 3] = cx + (Math.random() - 0.5) * 6;
-        pos[i * 3 + 1] = (Math.random() - 0.5) * 4;
-        pos[i * 3 + 2] = cz + (Math.random() - 0.5) * 6;
+    function drawHex(cx: number, cy: number, r: number, alpha: number) {
+      ctx!.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i + Math.PI / 6;
+        const x = cx + r * Math.cos(a);
+        const y = cy + r * Math.sin(a);
+        if (i === 0) ctx!.moveTo(x, y);
+        else ctx!.lineTo(x, y);
       }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      const mat = new THREE.PointsMaterial({
-        color, size: 0.12, transparent: true, opacity: 0.2,
-        sizeAttenuation: true,
-      });
-      scene.add(new THREE.Points(geo, mat));
-    });
+      ctx!.closePath();
+      ctx!.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
+      ctx!.lineWidth = 0.6;
+      ctx!.stroke();
+    }
+
+    // --- Matrix rain ---
+    const fontSize = 13;
+    const cols = Math.floor(w / fontSize);
+    const drops: number[] = new Array(cols).fill(0).map(() => Math.random() * -100);
+    const charSet = "01アイウエオカキクケコサシスセソタチツテト1010110100";
 
     let time = 0;
     let frame = 0;
-    let lastRender = 0;
-    const interval = 1000 / 24; // 24fps cap
+    let last = 0;
+    const interval = 1000 / 24;
 
-    function animate(now: number) {
-      frame = requestAnimationFrame(animate);
-      if (now - lastRender < interval) return;
-      lastRender = now;
+    function tick(now: number) {
+      frame = requestAnimationFrame(tick);
+      if (now - last < interval) return;
+      last = now;
+      time += 0.016;
 
-      time += 0.003;
-      globe.rotation.y = time * 0.3;
-      globe.rotation.x = time * 0.1;
-      camera.position.x = Math.sin(time * 0.15) * 1.5;
-      camera.position.y = 2 + Math.sin(time * 0.2) * 0.5;
-      camera.lookAt(0, 0, 0);
-      renderer.render(scene, camera);
+      // Background fade (creates the matrix trail effect)
+      ctx!.fillStyle = "rgba(5, 9, 18, 0.18)";
+      ctx!.fillRect(0, 0, w, h);
+
+      // Hex grid
+      const cols2 = Math.ceil(w / hexW) + 2;
+      const rows2 = Math.ceil(h / vert) + 2;
+      for (let row = -1; row < rows2; row++) {
+        for (let col = -1; col < cols2; col++) {
+          const cx = col * hexW + (row % 2 === 0 ? 0 : hexW / 2);
+          const cy = row * vert;
+          // Distance-based alpha pulse
+          const dx = cx - w / 2;
+          const dy = cy - h / 2;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const pulse = Math.sin(time * 0.8 - dist * 0.008) * 0.5 + 0.5;
+          const alpha = 0.04 + pulse * 0.05;
+          drawHex(cx, cy, hexSize - 2, alpha);
+        }
+      }
+
+      // Matrix rain
+      ctx!.font = `${fontSize}px 'JetBrains Mono', monospace`;
+      for (let i = 0; i < cols; i++) {
+        const ch = charSet[Math.floor(Math.random() * charSet.length)];
+        const y = drops[i] * fontSize;
+        // Head — bright cyan
+        ctx!.fillStyle = "rgba(0, 240, 255, 0.8)";
+        ctx!.fillText(ch, i * fontSize, y);
+        // Tail — matrix green
+        ctx!.fillStyle = "rgba(57, 255, 20, 0.35)";
+        ctx!.fillText(ch, i * fontSize, y - fontSize);
+
+        if (y > h && Math.random() > 0.975) drops[i] = 0;
+        drops[i] += 0.6;
+      }
     }
-    frame = requestAnimationFrame(animate);
-
-    function onResize() {
-      const nw = el!.clientWidth;
-      const nh = el!.clientHeight;
-      camera.aspect = nw / nh;
-      camera.updateProjectionMatrix();
-      renderer.setSize(nw, nh);
-    }
-    window.addEventListener("resize", onResize);
+    frame = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener("resize", onResize);
-      renderer.dispose();
-      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+      window.removeEventListener("resize", resize);
     };
   }, []);
 
-  return <div ref={containerRef} className="fixed inset-0 z-0" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 z-0 pointer-events-none"
+      style={{ background: "#050912" }}
+    />
+  );
 }

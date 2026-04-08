@@ -1,31 +1,31 @@
 export const SVG_WIDTH = 1280;
 export const SVG_HEIGHT = 900;
 
-// Session group → room mapping
+// Session group → room mapping (Cyber Security palette — neon over deep navy)
 export const ROOM_COLORS: Record<string, { accent: string; floor: string; wall: string; label: string }> = {
-  "0":              { accent: "#26c6da", floor: "#1a2228", wall: "#0e1a20", label: "Main" },
-  "01-pulse":       { accent: "#ff5252", floor: "#281414", wall: "#200e0e", label: "Pulse" },
-  "02-hermes":      { accent: "#26a69a", floor: "#142824", wall: "#0e201a", label: "Hermes" },
-  "03-neo":         { accent: "#64b5f6", floor: "#141a28", wall: "#0e1420", label: "Neo" },
-  "04-homekeeper":  { accent: "#448aff", floor: "#141a28", wall: "#0e1420", label: "Homekeeper" },
-  "05-volt":        { accent: "#fdd835", floor: "#282814", wall: "#20200e", label: "Volt" },
-  "06-floodboy":    { accent: "#42a5f5", floor: "#141a28", wall: "#0e1420", label: "FloodBoy" },
-  "07-fireman":     { accent: "#ef5350", floor: "#281418", wall: "#200e12", label: "FireMan" },
-  "08-dustboy":     { accent: "#ffa726", floor: "#281e14", wall: "#201810", label: "DustBoy" },
-  "09-dustboychain": { accent: "#ff7043", floor: "#281a14", wall: "#201410", label: "DustBoyChain" },
-  "10-arthur":      { accent: "#7e57c2", floor: "#1a1428", wall: "#120e1e", label: "Arthur" },
-  "11-calliope":    { accent: "#69f0ae", floor: "#142818", wall: "#0e2010", label: "Calliope" },
-  "12-odin":        { accent: "#ab47bc", floor: "#1e1428", wall: "#160e1e", label: "Odin" },
-  "13-mother":      { accent: "#ec407a", floor: "#281420", wall: "#200e18", label: "Mother" },
-  "14-nexus":       { accent: "#26c6da", floor: "#1a2228", wall: "#0e1a20", label: "Nexus" },
-  "15-xiaoer":      { accent: "#8d6e63", floor: "#1e1814", wall: "#16120e", label: "XiaoEr" },
-  "16-pigment":     { accent: "#e040fb", floor: "#1e1428", wall: "#160e1e", label: "Pigment" },
-  "99-overview":    { accent: "#78909c", floor: "#1a1a1e", wall: "#121216", label: "Overview" },
+  "0":              { accent: "#00f0ff", floor: "#08111c", wall: "#040a14", label: "Main" },
+  "01-pulse":       { accent: "#ff2e88", floor: "#1a0814", wall: "#10040a", label: "Pulse" },
+  "02-hermes":      { accent: "#00ffd1", floor: "#08181a", wall: "#040e10", label: "Hermes" },
+  "03-neo":         { accent: "#39ff14", floor: "#0a1a0e", wall: "#041008", label: "Neo" },
+  "04-homekeeper":  { accent: "#3d9bff", floor: "#08121f", wall: "#040814", label: "Homekeeper" },
+  "05-volt":        { accent: "#ffeb3b", floor: "#1a1808", wall: "#100e04", label: "Volt" },
+  "06-floodboy":    { accent: "#22d3ee", floor: "#08141f", wall: "#040a14", label: "FloodBoy" },
+  "07-fireman":     { accent: "#ff3344", floor: "#1a0810", wall: "#10040a", label: "FireMan" },
+  "08-dustboy":     { accent: "#ffb800", floor: "#1a1208", wall: "#100a04", label: "DustBoy" },
+  "09-dustboychain": { accent: "#ff7a00", floor: "#1a1008", wall: "#100804", label: "DustBoyChain" },
+  "10-arthur":      { accent: "#b14bff", floor: "#10081a", wall: "#0a0410", label: "Arthur" },
+  "11-calliope":    { accent: "#00ff9d", floor: "#08181a", wall: "#04100e", label: "Calliope" },
+  "12-odin":        { accent: "#c724ff", floor: "#10081a", wall: "#0a0410", label: "Odin" },
+  "13-mother":      { accent: "#ff2e88", floor: "#1a0814", wall: "#10040a", label: "Mother" },
+  "14-nexus":       { accent: "#00f0ff", floor: "#08111c", wall: "#040a14", label: "Nexus" },
+  "15-xiaoer":      { accent: "#d4a373", floor: "#1a1208", wall: "#100a04", label: "XiaoEr" },
+  "16-pigment":     { accent: "#ff5cf6", floor: "#1a0820", wall: "#100410", label: "Pigment" },
+  "99-overview":    { accent: "#7a8ca0", floor: "#0a0e16", wall: "#06080e", label: "Overview" },
 };
 
 const FALLBACK_ACCENTS = [
-  "#ab47bc", "#ec407a", "#42a5f5", "#26a69a", "#ffa726", "#7e57c2",
-  "#ef5350", "#4caf50", "#fdd835", "#26c6da", "#ff7043", "#69f0ae",
+  "#00f0ff", "#39ff14", "#ff2e88", "#b14bff", "#ffb800", "#00ffd1",
+  "#ff3344", "#22d3ee", "#c724ff", "#00ff9d", "#ff7a00", "#ff5cf6",
 ];
 
 export function roomStyle(sessionName: string) {
@@ -82,9 +82,8 @@ export function agentIcon(name: string): string | undefined {
 
 // Agent capsule colors (deterministic by name hash)
 export const AGENT_COLORS = [
-  "#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#ffa07a",
-  "#dda0dd", "#98d8c8", "#f7dc6f", "#bb8fce", "#85c1e9",
-  "#f0b27a", "#82e0aa",
+  "#00f0ff", "#39ff14", "#ff2e88", "#b14bff", "#ffb800", "#00ffd1",
+  "#22d3ee", "#c724ff", "#00ff9d", "#ff5cf6", "#ff7a00", "#3d9bff",
 ];
 
 export function agentColor(name: string): string {

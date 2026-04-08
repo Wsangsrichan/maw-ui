@@ -106,9 +106,11 @@ function useTokenRate() {
 export const StatusBar = memo(function StatusBar({ connected, agentCount, sessionCount, tabCount = 0, activeView = "office", askCount = 0, onInbox, onJump, muted, onToggleMute, children }: StatusBarProps) {
   const { lastHourRate } = useTokenRate();
   return (
-    <header className="sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 mx-4 sm:mx-6 mt-3 px-4 sm:px-6 py-2.5 rounded-2xl bg-black/50 backdrop-blur-xl border border-white/[0.06] shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
-      <a href="#office" className="text-base sm:text-lg font-bold tracking-[4px] sm:tracking-[6px] text-cyan-400 uppercase whitespace-nowrap hover:text-cyan-300 transition-colors">
+    <header className="hud-frame cyber-panel sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 mx-4 sm:mx-6 mt-3 px-4 sm:px-6 py-2.5 rounded-xl">
+      <a href="#office" className="cyber-glow text-base sm:text-lg font-bold tracking-[4px] sm:tracking-[6px] text-cyan-300 uppercase whitespace-nowrap hover:text-cyan-200 transition-colors flex items-center gap-2">
+        <span className="text-cyan-400/60">[</span>
         HAOCOMM Office
+        <span className="text-cyan-400/60">]</span>
       </a>
 
       <span className="flex items-center gap-1.5 text-sm text-white/70">
